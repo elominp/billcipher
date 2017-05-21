@@ -7,6 +7,7 @@ import (
 	"strings"
 	//"bytes"
 	//"strconv"
+	"strconv"
 )
 
 var api = slack.New("xoxb-184523172850-7nbbBBEc0gvjSXaBFVq7Fqtk")
@@ -49,17 +50,6 @@ func initGifs() {
 }
 
 func initSanity() {
-	/* data, e := ioutil.ReadFile("sanity.txt")
-	panicCheck(e)
-	lines := strings.Split(string(data), "\n")
-	for i := 0; i < len(lines); i++ {
-		tuple := strings.Split(lines[i], "=")
-		if len(tuple) > 1 {
-			points, _ := strconv.Atoi(tuple[1])
-			sanity[tuple[0]] = points
-		}
-	}
-	fmt.Printf("sanity :\n%s\n", sanity) */
 	users, e := api.GetUsers()
 	if e != nil {
 		warningCheck(e)
@@ -93,14 +83,21 @@ func messageEventGifPoster(message string, meme string, channel string) {
 }
 
 func messageEvent(message *slack.MessageEvent) {
+	if getUsername(message.User) == "billcipher" {
+		return
+	}
 	text := message.Text
 	if strings.Contains(message.Text, "<@U5EFD52R0>") == true || message.Channel[0] == 'D' {
 		text = strings.Replace(text, "<@U5EFD52R0>", "", 1)
 		text = strings.TrimSpace(text)
 		words := strings.Split(text, "=")
+		fmt.Println("Recognize command mode")
 		if len(words) > 0 {
-			if val, ok := commands[words[0]]; ok {
-				go val.(func(*slack.MessageEvent))(message)
+			for k, v := range(commands) {
+				if strings.Contains(text, k) {
+					go v.(func(*slack.MessageEvent))(message)
+					return
+				}
 			}
 		}
 	}
@@ -109,31 +106,57 @@ func messageEvent(message *slack.MessageEvent) {
 	}
 }
 
+func getUsername(id string) string {
+	users, e := api.GetUsers()
+	if e != nil {
+		warningCheck(e)
+		return ""
+	}
+	for i := 0; i < len(users); i++ {
+		if users[i].ID == id {
+			return users[i].Name
+		}
+	}
+	return ""
+}
+
 func helpCommand(message *slack.MessageEvent) {
 	params := slack.PostMessageParameters{}
 	params.AsUser = true
 	params.UnfurlLinks = true
 	params.UnfurlMedia = true
 	api.PostMessage(message.Channel, "https://media.giphy.com/media/WfE3yNXrkMAAo/giphy.gif?response_id=5921b583a79f5c11408fde74", params)
-	api.PostMessage(message.Channel, "-1 en sanité pour " + message.Username, params)
-	if user, ok := sanity[message.Username]; ok {
-		sanity[message.Username] = user - 1
-	} else {
-		sanity[message.Username] = 9
+	username := getUsername(message.User)
+	if username != "" {
+		api.PostMessage(message.Channel, "-1 en sanité pour " + username, params)
+		if user, ok := sanity[username]; ok {
+			sanity[username] = user - 1
+		} else {
+			sanity[username] = 9
+		}
 	}
 }
 
 func sanityCommand(message *slack.MessageEvent) {
 	text := "Sanity board :\n"
 	for user, points := range(sanity) {
-		text = text + user + " : " + string(points) + "\n"
+		text = text + user + " : " + strconv.Itoa(points) + "\n"
 	}
 	simpleMessagePoster(message.Channel, text)
 }
 
 var commands = map[string]interface{}{
 	"help": helpCommand,
+	"aide-moi": helpCommand,
+	"aidez-moi": helpCommand,
+	"aide moi": helpCommand,
+	"aidez moi": helpCommand,
+	"a l'aide": helpCommand,
+	"à l'aide": helpCommand,
+	"a laide": helpCommand,
 	"sanity": sanityCommand,
+	"sanite": sanityCommand,
+	"sanité": sanityCommand,
 }
 
 func main() {
