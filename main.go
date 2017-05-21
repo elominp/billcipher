@@ -46,7 +46,7 @@ func initGifs() {
 }
 
 func joinedChannel(channel string) {
-
+	a
 }
 
 func main() {
