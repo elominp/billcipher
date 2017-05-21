@@ -45,8 +45,30 @@ func initGifs() {
 	}
 }
 
+func simpleMessagePoster(channel string, message string) {
+	params := slack.PostMessageParameters{}
+	params.AsUser = true
+	api.PostMessage(channel, message, params)
+}
+
 func joinedChannel(channel string) {
-	a
+	simpleMessagePoster(channel, "Hello there !")
+}
+
+func messageEventGifPoster(message string, meme string, channel string) {
+	if strings.Contains(message, meme) {
+		params := slack.PostMessageParameters{}
+		params.AsUser = true
+		params.UnfurlLinks = true
+		params.UnfurlMedia = true
+		api.PostMessage(channel, gifs[meme], params)
+	}
+}
+
+func messageEvent(message *slack.MessageEvent) {
+	for meme := range gifs {
+		go messageEventGifPoster(message.Text, meme, message.Channel)
+	}
 }
 
 func main() {
@@ -61,7 +83,11 @@ func main() {
 		fmt.Printf("Event received : %s\n", msg.Type)
 		switch event := msg.Data.(type) {
 		case *slack.ChannelJoinedEvent:
-			go joinedChannel(event.Channel)
+			go joinedChannel(event.Channel.Name)
+		case *slack.MessageEvent:
+			go messageEvent(event)
+		default:
+			fmt.Println("Not handled")
 		}
 	}
 }
