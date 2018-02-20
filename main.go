@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-var api = slack.New("xoxb-184523172850-7nbbBBEc0gvjSXaBFVq7Fqtk")
+var api = slack.New("")
 
 var gifs = make(map[string]string)
 var sanity = make(map[string]int)
